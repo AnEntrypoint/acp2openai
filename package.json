@@ -1,22 +1,41 @@
 {
   "name": "acp2openai",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "OpenAI-compatible HTTP facade over ACP (Kilo Code + opencode) — point any OpenAI SDK at it.",
   "type": "module",
-  "bin": { "acp2openai": "bin/acp2openai.js" },
+  "bin": {
+    "acp2openai": "bin/acp2openai.js"
+  },
   "main": "lib/server.js",
   "exports": {
     ".": "./lib/server.js",
     "./translate": "./lib/translate.js",
     "./acp-client": "./lib/acp-client.js"
   },
-  "files": ["bin", "lib", "README.md", "LICENSE"],
+  "files": [
+    "bin",
+    "lib",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "start": "node bin/acp2openai.js",
     "test": "node test.js"
   },
-  "repository": { "type": "git", "url": "https://github.com/AnEntrypoint/acp2openai.git" },
-  "keywords": ["acp", "openai", "kilo", "opencode", "proxy", "sdk"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AnEntrypoint/acp2openai.git"
+  },
+  "keywords": [
+    "acp",
+    "openai",
+    "kilo",
+    "opencode",
+    "proxy",
+    "sdk"
+  ],
   "license": "MIT",
-  "engines": { "node": ">=18" }
+  "engines": {
+    "node": ">=18"
+  }
 }
