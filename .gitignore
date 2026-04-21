@@ -1,0 +1,8 @@
+node_modules
+.probe*.log
+.probe*.mjs
+.test.log
+.test.err
+.test-out.log
+*.tmp
+.thebird-cfg
