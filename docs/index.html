@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>acp2openai — OpenAI-compat facade over Kilo/opencode ACP</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ctext y='13' font-size='14'%3E◐%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="styles.css" />
+<script>
+(() => {
+  const saved = localStorage.getItem('a2o_theme');
+  const prefDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches;
+  document.documentElement.setAttribute('data-theme', saved || (prefDark ? 'dark' : 'light'));
+  window.toggleTheme = () => {
+    const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('a2o_theme', next);
+  };
+})();
+</script>
+</head>
+<body>
+<div class="wrap">
+  <header class="site-header">
+    <pre class="logo">  ▀█▀ █░█ █▀▀ █▄▄ █ █▀█ █▀▄   <span class="kilo">acp2openai</span>
+   █  █▀█ ██▄ █▄█ █ █▀▄ █▄▀   <span class="green">kilo + opencode → openai sdk</span></pre>
+    <div class="tagline">Point any OpenAI SDK at it. Get Kilo/opencode routing transparently. <strong>Real token-by-token SSE</strong> via ACP's <code>message.part.delta</code>.</div>
+    <div class="actions">
+      <a class="btn primary" href="#try">[try it live]</a>
+      <a class="btn" href="https://github.com/AnEntrypoint/acp2openai" target="_blank">[github]</a>
+      <button class="btn" onclick="toggleTheme()" title="toggle theme">◐</button>
+    </div>
+  </header>
+
+  <section>
+    <h2>install</h2>
+    <pre class="code"><code>npx acp2openai                    # defaults :4800, kilo :4780, opencode :4790
+npx acp2openai --port 8080        # custom port</code></pre>
+    <p class="muted">Requires an ACP backend running: <code>kilo serve --port 4780</code> or <code>opencode serve --port 4790</code>.</p>
+  </section>
+
+  <section>
+    <h2>drop-in openai sdk</h2>
+    <pre class="code"><code>import OpenAI from 'openai';
+const client = new OpenAI({ baseURL: 'http://localhost:4800/v1', apiKey: 'none' });
+
+const stream = await client.chat.completions.create({
+  model: 'kilo/x-ai/grok-code-fast-1:optimized:free',
+  messages: [{ role: 'user', content: 'hi' }],
+  stream: true,
+});
+for await (const c of stream) process.stdout.write(c.choices[0]?.delta?.content || '');</code></pre>
+  </section>
+
+  <section id="try">
+    <h2>try it live</h2>
+    <p class="muted">Running <code>acp2openai</code> locally? Paste endpoint + model, hit send.</p>
+    <div class="demo">
+      <div class="demo-row">
+        <label>endpoint</label>
+        <input id="endpoint" type="text" value="http://localhost:4800/v1" />
+      </div>
+      <div class="demo-row">
+        <label>model</label>
+        <select id="model"></select>
+      </div>
+      <div class="demo-row">
+        <label>prompt</label>
+        <textarea id="prompt" rows="3">reply with three words</textarea>
+      </div>
+      <div class="demo-row">
+        <button class="btn primary" id="send-btn">[stream]</button>
+        <span class="muted" id="stats"></span>
+      </div>
+      <div class="output-wrap">
+        <div class="output-tab" data-tab="content">content</div>
+        <div class="output-tab" data-tab="reasoning">reasoning</div>
+        <div class="output-tab" data-tab="raw">raw chunks</div>
+      </div>
+      <pre id="output" class="output"></pre>
+    </div>
+  </section>
+
+  <section>
+    <h2>model routing</h2>
+    <p>Model ID format: <code>&lt;backend&gt;/&lt;model&gt;</code> where backend ∈ <code>{kilo, opencode}</code>.</p>
+    <table class="routes">
+      <thead><tr><th>id</th><th>backend</th><th>cost</th></tr></thead>
+      <tbody>
+        <tr><td><code>kilo/x-ai/grok-code-fast-1:optimized:free</code></td><td>kilo</td><td>free</td></tr>
+        <tr><td><code>kilo/kilo-auto/free</code></td><td>kilo</td><td>free</td></tr>
+        <tr><td><code>kilo/openrouter/free</code></td><td>kilo</td><td>free</td></tr>
+        <tr><td><code>opencode/minimax-m2.5-free</code></td><td>opencode</td><td>free</td></tr>
+        <tr><td><code>opencode/nemotron-3-super-free</code></td><td>opencode</td><td>free</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>endpoints</h2>
+    <table class="routes">
+      <thead><tr><th>method</th><th>path</th><th>purpose</th></tr></thead>
+      <tbody>
+        <tr><td>POST</td><td><code>/v1/chat/completions</code></td><td>OpenAI chat (streaming + non-streaming)</td></tr>
+        <tr><td>GET</td><td><code>/v1/models</code></td><td>live-probed model list</td></tr>
+        <tr><td>GET</td><td><code>/health</code></td><td>backend status</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>how it works</h2>
+    <ul class="how">
+      <li><strong>messages[]</strong> → ACP text part (roles flattened, system hoisted)</li>
+      <li><strong>ACP <code>message.part.delta</code></strong> → OpenAI <code>delta.content</code> / <code>delta.reasoning_content</code></li>
+      <li><strong>partID → part.type lookup</strong> from preceding <code>message.part.updated</code> → routes reasoning deltas correctly</li>
+      <li><strong>ACP tool part state</strong> → OpenAI <code>tool_calls</code> (input snapshots)</li>
+      <li><strong>session.idle / session.turn.close</strong> → <code>finish_reason: stop</code> (no timeout heuristics)</li>
+    </ul>
+    <p class="muted">True streaming: first chunk arrives in ~1ms after backend responds, one SSE frame per token.</p>
+  </section>
+
+  <footer>
+    <span>MIT · </span>
+    <a href="https://github.com/AnEntrypoint/acp2openai">AnEntrypoint/acp2openai</a>
+    <span> · sibling of </span>
+    <a href="https://github.com/AnEntrypoint/thebird">thebird</a>
+  </footer>
+</div>
+<script type="module" src="app.js"></script>
+</body>
+</html>
