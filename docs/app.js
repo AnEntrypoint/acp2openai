@@ -84,6 +84,9 @@ async function streamChat() {
 
 function init() {
   initModels();
+  const sameOrigin = location.protocol === 'http:' || location.protocol === 'https:';
+  const default_endpoint = sameOrigin && !location.host.includes('github.io') ? location.origin + '/v1' : 'http://localhost:4800/v1';
+  $('endpoint').value = default_endpoint;
   $('send-btn').addEventListener('click', streamChat);
   document.querySelectorAll('.output-tab').forEach(t => t.addEventListener('click', () => setTab(t.dataset.tab)));
   setTab('content');

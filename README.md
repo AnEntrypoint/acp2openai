@@ -14,7 +14,13 @@ npx acp2openai                  # defaults: :4800, kilo :4780, opencode :4790
 npx acp2openai --port 8080      # custom port
 
 # 3. Point any OpenAI SDK at http://localhost:4800/v1
+#    Or open http://localhost:4800/ for the built-in live-streaming demo
 ```
+
+## Demo
+
+- **Built-in**: `http://localhost:4800/` when acp2openai is running (no CORS, full streaming)
+- **GH Pages**: https://anentrypoint.github.io/acp2openai (browser-blocked from loopback by Chrome PNA — use built-in demo instead)
 
 ## Usage
 
