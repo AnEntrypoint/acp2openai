@@ -1,16 +1,26 @@
-const MODELS = [
+const FALLBACK_MODELS = [
+  'claude/sonnet',
+  'claude/haiku',
+  'claude/opus',
   'kilo/x-ai/grok-code-fast-1:optimized:free',
   'kilo/kilo-auto/free',
   'kilo/openrouter/free',
   'opencode/minimax-m2.5-free',
-  'opencode/nemotron-3-super-free',
 ];
 
 const $ = id => document.getElementById(id);
 
-function initModels() {
+async function initModels(endpoint) {
   const sel = $('model');
-  sel.innerHTML = MODELS.map(m => `<option value="${m}">${m}</option>`).join('');
+  let models = FALLBACK_MODELS;
+  try {
+    const r = await fetch(endpoint.replace(/\/$/, '') + '/models', { signal: AbortSignal.timeout(2000) });
+    if (r.ok) {
+      const data = await r.json();
+      if (data.data?.length) models = data.data.map(m => m.id);
+    }
+  } catch { /* fallback */ }
+  sel.innerHTML = models.map(m => `<option value="${m}">${m}</option>`).join('');
 }
 
 const state = { content: '', reasoning: '', raw: [], activeTab: 'content' };
@@ -82,12 +92,13 @@ async function streamChat() {
   }
 }
 
-function init() {
-  initModels();
+async function init() {
   const sameOrigin = location.protocol === 'http:' || location.protocol === 'https:';
   const default_endpoint = sameOrigin && !location.host.includes('github.io') ? location.origin + '/v1' : 'http://localhost:4800/v1';
   $('endpoint').value = default_endpoint;
+  await initModels(default_endpoint);
   $('send-btn').addEventListener('click', streamChat);
+  $('endpoint').addEventListener('change', e => initModels(e.target.value));
   document.querySelectorAll('.output-tab').forEach(t => t.addEventListener('click', () => setTab(t.dataset.tab)));
   setTab('content');
 }

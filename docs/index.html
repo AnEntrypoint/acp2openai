@@ -1,132 +1,174 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>acptoapi — OpenAI-compat facade over Kilo/opencode ACP</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ctext y='13' font-size='14'%3E◐%3C/text%3E%3C/svg%3E">
-<link rel="stylesheet" href="styles.css" />
-<script>
-(() => {
-  const saved = localStorage.getItem('a2o_theme');
-  const prefDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches;
-  document.documentElement.setAttribute('data-theme', saved || (prefDark ? 'dark' : 'light'));
-  window.toggleTheme = () => {
-    const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', next);
-    localStorage.setItem('a2o_theme', next);
-  };
-})();
-</script>
+<!doctype html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#247420" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#3A9A34" media="(prefers-color-scheme: dark)">
+  <meta name="color-scheme" content="light dark">
+  <title>acptoapi — OpenAI-compat facade over ACP + Claude Code</title>
+  <meta name="description" content="OpenAI-compatible HTTP facade. Route requests to Kilo Code, opencode, or Claude Code CLI transparently. Real token-by-token SSE streaming.">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="stylesheet" href="colors_and_type.css">
+  <link rel="stylesheet" href="app-shell.css">
+  <style>
+    .routes { width: 100%; max-width: 820px; background: var(--panel-1); border-radius: 8px; overflow: hidden; border-collapse: collapse; box-shadow: var(--panel-shadow); margin: 12px 0; }
+    .routes th, .routes td { padding: 8px 14px; font-size: 13px; text-align: left; }
+    .routes thead { background: var(--panel-2); }
+    .routes th { font-family: var(--ff-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--panel-text-2); font-weight: 600; }
+    .routes tbody tr:nth-child(even) { background: var(--panel-2); }
+    .routes td code { font-size: 12px; }
+    .demo { max-width: 820px; display: flex; flex-direction: column; gap: 10px; margin: 12px 0; }
+    .demo-row { display: grid; grid-template-columns: 90px 1fr; gap: 12px; align-items: center; }
+    .demo-row label { font-family: var(--ff-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--panel-text-2); }
+    .demo-row input, .demo-row select, .demo-row textarea {
+      font: inherit; font-size: 13px; padding: 7px 10px; background: var(--panel-1); color: var(--panel-text);
+      border: 1px solid var(--panel-3); border-radius: 6px; font-family: var(--ff-mono); outline: none;
+    }
+    .demo-row input:focus, .demo-row select:focus, .demo-row textarea:focus { border-color: var(--panel-accent); }
+    .demo-row textarea { resize: vertical; min-height: 60px; }
+    .output-tabs { display: flex; gap: 2px; margin-top: 8px; }
+    .output-tab { padding: 6px 12px; font-family: var(--ff-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--panel-text-2); cursor: pointer; background: var(--panel-1); border-radius: 6px 6px 0 0; }
+    .output-tab.active { background: var(--panel-2); color: var(--panel-accent); }
+    .output { margin: 0; background: var(--panel-1); padding: 14px 16px; font-family: var(--ff-mono); font-size: 12px;
+      line-height: 1.6; color: var(--panel-text); border-radius: 0 8px 8px 8px; min-height: 120px; max-height: 360px;
+      overflow: auto; white-space: pre-wrap; box-shadow: var(--panel-shadow); }
+    .how { margin: 8px 0; padding: 0; list-style: none; max-width: 72ch; }
+    .how li { padding: 4px 0; font-size: 13px; color: var(--panel-text); }
+    .how li strong { color: var(--panel-accent); font-weight: 600; }
+    .actions { display: flex; gap: 8px; margin: 8px 0 4px 0; flex-wrap: wrap; }
+  </style>
 </head>
-<body>
-<div class="wrap">
-  <header class="site-header">
-    <pre class="logo">  ▀█▀ █░█ █▀▀ █▄▄ █ █▀█ █▀▄   <span class="kilo">acptoapi</span>
-   █  █▀█ ██▄ █▄█ █ █▀▄ █▄▀   <span class="green">kilo + opencode → openai sdk</span></pre>
-    <div class="tagline">Point any OpenAI SDK at it. Get Kilo/opencode routing transparently. <strong>Real token-by-token SSE</strong> via ACP's <code>message.part.delta</code>.</div>
-    <div class="actions">
-      <a class="btn primary" href="#try">[try it live]</a>
-      <a class="btn" href="https://github.com/AnEntrypoint/acptoapi" target="_blank">[github]</a>
-      <button class="btn" onclick="toggleTheme()" title="toggle theme">◐</button>
-    </div>
+<body data-screen-label="acptoapi">
+<div class="app">
+  <header class="app-topbar">
+    <span class="brand">acptoapi<span class="slash"> / </span>openai-compat facade</span>
+    <nav>
+      <a href="#install" class="active">install</a>
+      <a href="#try">try</a>
+      <a href="#models">models</a>
+      <a href="#endpoints">endpoints</a>
+      <a href="#how">how</a>
+      <a href="https://github.com/AnEntrypoint/acptoapi" target="_blank" rel="noopener">source ↗</a>
+    </nav>
   </header>
+  <div class="app-crumb">
+    <span>acptoapi</span><span class="sep">›</span>
+    <span class="leaf">readme</span>
+  </div>
+  <div class="app-body no-side">
+    <main class="app-main">
+      <h1>acptoapi</h1>
+      <p class="lede">OpenAI-compatible HTTP facade. Point any OpenAI SDK at it — requests route to Kilo Code, opencode, or Claude Code CLI by model prefix. Real token-by-token SSE, agentic tool calls preserved, no API keys required locally.</p>
 
-  <section>
-    <h2>install</h2>
-    <pre class="code"><code>npx acptoapi                      # defaults :4800, kilo :4780, opencode :4790
-npx acptoapi --port 8080          # custom port</code></pre>
-    <p class="muted">Requires an ACP backend running: <code>kilo serve --port 4780</code> or <code>opencode serve --port 4790</code>.</p>
-  </section>
+      <div class="actions">
+        <a class="btn-primary" href="#try">try it live</a>
+        <a class="btn" href="https://github.com/AnEntrypoint/acptoapi" target="_blank" rel="noopener">github ↗</a>
+        <span class="chip accent">streaming</span>
+        <span class="chip">tool_calls</span>
+        <span class="chip">reasoning_content</span>
+      </div>
 
-  <section>
-    <h2>drop-in openai sdk</h2>
-    <pre class="code"><code>import OpenAI from 'openai';
-const client = new OpenAI({ baseURL: 'http://localhost:4800/v1', apiKey: 'none' });
+      <h2 id="install">install</h2>
+      <div class="cli">
+        <span class="prompt">$</span>
+        <span class="cmd" id="cli-cmd">npx acptoapi</span>
+        <span class="copy" onclick="navigator.clipboard.writeText(document.getElementById('cli-cmd').textContent)">copy</span>
+      </div>
+      <p>Defaults: <code>:4800</code>, kilo <code>:4780</code>, opencode <code>:4790</code>, <code>claude</code> on <code>$PATH</code>. Override with <code>--port</code>, <code>--kilo</code>, <code>--opencode</code>, <code>--claude-bin</code>.</p>
 
-const stream = await client.chat.completions.create({
-  model: 'kilo/x-ai/grok-code-fast-1:optimized:free',
-  messages: [{ role: 'user', content: 'hi' }],
-  stream: true,
+      <h3>backends</h3>
+      <table class="kv">
+        <tr><td>kilo</td><td>run <code>kilo serve --port 4780</code></td></tr>
+        <tr><td>opencode</td><td>run <code>opencode serve --port 4790</code></td></tr>
+        <tr><td>claude</td><td>install Claude Code CLI (<code>claude</code> on PATH), already authenticated</td></tr>
+      </table>
+
+      <h2 id="sdk">drop-in openai sdk</h2>
+      <pre><code><span class="k">import</span> OpenAI <span class="k">from</span> <span class="s">'openai'</span>;
+<span class="k">const</span> client = <span class="k">new</span> OpenAI({ baseURL: <span class="s">'http://localhost:4800/v1'</span>, apiKey: <span class="s">'none'</span> });
+
+<span class="k">const</span> stream = <span class="k">await</span> client.chat.completions.create({
+  model: <span class="s">'claude/sonnet'</span>,
+  messages: [{ role: <span class="s">'user'</span>, content: <span class="s">'hi'</span> }],
+  stream: <span class="k">true</span>,
 });
-for await (const c of stream) process.stdout.write(c.choices[0]?.delta?.content || '');</code></pre>
-  </section>
+<span class="k">for await</span> (<span class="k">const</span> c <span class="k">of</span> stream) process.stdout.write(c.choices[<span class="s">0</span>]?.delta?.content || <span class="s">''</span>);</code></pre>
 
-  <section id="try">
-    <h2>try it live</h2>
-    <p class="muted">Running <code>acptoapi</code> locally? Paste endpoint + model, hit send.</p>
-    <div class="demo">
-      <div class="demo-row">
-        <label>endpoint</label>
-        <input id="endpoint" type="text" value="" placeholder="http://localhost:4800/v1" />
+      <h2 id="try">try it live</h2>
+      <p>Requires <code>acptoapi</code> running locally. Paste endpoint, pick model, hit stream.</p>
+      <div class="demo">
+        <div class="demo-row">
+          <label>endpoint</label>
+          <input id="endpoint" type="text" value="" placeholder="http://localhost:4800/v1" />
+        </div>
+        <div class="demo-row">
+          <label>model</label>
+          <select id="model"></select>
+        </div>
+        <div class="demo-row">
+          <label>prompt</label>
+          <textarea id="prompt" rows="3">reply with three words</textarea>
+        </div>
+        <div class="demo-row">
+          <label></label>
+          <div style="display:flex; gap:10px; align-items:center;">
+            <button class="btn-primary" id="send-btn">stream</button>
+            <span id="stats" style="font-family: var(--ff-mono); font-size: 11px; color: var(--panel-text-2);"></span>
+          </div>
+        </div>
+        <div class="output-tabs">
+          <div class="output-tab active" data-tab="content">content</div>
+          <div class="output-tab" data-tab="reasoning">reasoning</div>
+          <div class="output-tab" data-tab="raw">raw</div>
+        </div>
+        <pre id="output" class="output">(nothing yet)</pre>
       </div>
-      <div class="demo-row">
-        <label>model</label>
-        <select id="model"></select>
-      </div>
-      <div class="demo-row">
-        <label>prompt</label>
-        <textarea id="prompt" rows="3">reply with three words</textarea>
-      </div>
-      <div class="demo-row">
-        <button class="btn primary" id="send-btn">[stream]</button>
-        <span class="muted" id="stats"></span>
-      </div>
-      <div class="output-wrap">
-        <div class="output-tab" data-tab="content">content</div>
-        <div class="output-tab" data-tab="reasoning">reasoning</div>
-        <div class="output-tab" data-tab="raw">raw chunks</div>
-      </div>
-      <pre id="output" class="output"></pre>
-    </div>
-  </section>
 
-  <section>
-    <h2>model routing</h2>
-    <p>Model ID format: <code>&lt;backend&gt;/&lt;model&gt;</code> where backend ∈ <code>{kilo, opencode}</code>.</p>
-    <table class="routes">
-      <thead><tr><th>id</th><th>backend</th><th>cost</th></tr></thead>
-      <tbody>
-        <tr><td><code>kilo/x-ai/grok-code-fast-1:optimized:free</code></td><td>kilo</td><td>free</td></tr>
-        <tr><td><code>kilo/kilo-auto/free</code></td><td>kilo</td><td>free</td></tr>
-        <tr><td><code>kilo/openrouter/free</code></td><td>kilo</td><td>free</td></tr>
-        <tr><td><code>opencode/minimax-m2.5-free</code></td><td>opencode</td><td>free</td></tr>
-        <tr><td><code>opencode/nemotron-3-super-free</code></td><td>opencode</td><td>free</td></tr>
-      </tbody>
-    </table>
-  </section>
+      <h2 id="models">model routing</h2>
+      <p>Model IDs use <code>&lt;backend&gt;/&lt;model&gt;</code>. Bare IDs default to <code>kilo</code>.</p>
+      <table class="routes">
+        <thead><tr><th>id</th><th>backend</th><th>notes</th></tr></thead>
+        <tbody>
+          <tr><td><code>kilo/x-ai/grok-code-fast-1:optimized:free</code></td><td>kilo</td><td>free</td></tr>
+          <tr><td><code>kilo/kilo-auto/free</code></td><td>kilo</td><td>free</td></tr>
+          <tr><td><code>opencode/minimax-m2.5-free</code></td><td>opencode</td><td>free</td></tr>
+          <tr><td><code>claude/sonnet</code></td><td>claude</td><td>Claude Code CLI, OAuth auth</td></tr>
+          <tr><td><code>claude/haiku</code></td><td>claude</td><td>fast + cheap</td></tr>
+          <tr><td><code>claude/opus</code></td><td>claude</td><td>max capability</td></tr>
+        </tbody>
+      </table>
 
-  <section>
-    <h2>endpoints</h2>
-    <table class="routes">
-      <thead><tr><th>method</th><th>path</th><th>purpose</th></tr></thead>
-      <tbody>
-        <tr><td>POST</td><td><code>/v1/chat/completions</code></td><td>OpenAI chat (streaming + non-streaming)</td></tr>
-        <tr><td>GET</td><td><code>/v1/models</code></td><td>live-probed model list</td></tr>
-        <tr><td>GET</td><td><code>/health</code></td><td>backend status</td></tr>
-      </tbody>
-    </table>
-  </section>
+      <h2 id="endpoints">endpoints</h2>
+      <table class="routes">
+        <thead><tr><th>method</th><th>path</th><th>purpose</th></tr></thead>
+        <tbody>
+          <tr><td>POST</td><td><code>/v1/chat/completions</code></td><td>OpenAI chat (streaming + non-streaming)</td></tr>
+          <tr><td>GET</td><td><code>/v1/models</code></td><td>live-probed model list</td></tr>
+          <tr><td>GET</td><td><code>/health</code></td><td>backend status</td></tr>
+        </tbody>
+      </table>
 
-  <section>
-    <h2>how it works</h2>
-    <ul class="how">
-      <li><strong>messages[]</strong> → ACP text part (roles flattened, system hoisted)</li>
-      <li><strong>ACP <code>message.part.delta</code></strong> → OpenAI <code>delta.content</code> / <code>delta.reasoning_content</code></li>
-      <li><strong>partID → part.type lookup</strong> from preceding <code>message.part.updated</code> → routes reasoning deltas correctly</li>
-      <li><strong>ACP tool part state</strong> → OpenAI <code>tool_calls</code> (input snapshots)</li>
-      <li><strong>session.idle / session.turn.close</strong> → <code>finish_reason: stop</code> (no timeout heuristics)</li>
-    </ul>
-    <p class="muted">True streaming: first chunk arrives in ~1ms after backend responds, one SSE frame per token.</p>
-  </section>
-
-  <footer>
-    <span>MIT · </span>
-    <a href="https://github.com/AnEntrypoint/acptoapi">AnEntrypoint/acptoapi</a>
-    <span> · sibling of </span>
-    <a href="https://github.com/AnEntrypoint/thebird">thebird</a>
+      <h2 id="how">how it works</h2>
+      <ul class="how">
+        <li><strong>messages[]</strong> → backend native format (ACP text part / claude <code>-p</code> prompt)</li>
+        <li><strong>text deltas</strong> → OpenAI <code>delta.content</code>, streamed one SSE frame per token</li>
+        <li><strong>reasoning</strong> → <code>delta.reasoning_content</code> (routed via partID → part.type)</li>
+        <li><strong>tool calls</strong> → OpenAI <code>delta.tool_calls</code> with input JSON accumulated from streamed deltas</li>
+        <li><strong>tool results</strong> (claude agentic loop) → folded into <code>delta.content</code> with a clear marker</li>
+        <li><strong>claude CLI</strong> is sandboxed: spawned in tempdir, no tools, no MCP, no skills, no hooks — pure prompt → text</li>
+        <li><strong>session end</strong> → <code>finish_reason: stop | length | tool_calls</code>, followed by <code>[DONE]</code></li>
+      </ul>
+      <p>First chunk arrives within a few ms of the backend's first token. No buffering, no polling.</p>
+    </main>
+  </div>
+  <footer class="app-status">
+    <span class="item">main</span>
+    <span class="item">• MIT</span>
+    <span class="item">• node ≥18</span>
+    <span class="spread"></span>
+    <span class="item"><a href="https://github.com/AnEntrypoint/acptoapi">AnEntrypoint/acptoapi</a></span>
   </footer>
 </div>
 <script type="module" src="app.js"></script>
-</body>
-</html>
+</body></html>
