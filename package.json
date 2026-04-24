@@ -35,7 +35,9 @@
     "url": "https://github.com/AnEntrypoint/acptoapi.git"
   },
   "dependencies": {
-    "@google/genai": "^1.0.0"
+    "@google/genai": "^1.0.0",
+    "flowie": "^0.0.1-alpha.8",
+    "xstate": "^5.30.0"
   },
   "engines": {
     "node": ">=18"
