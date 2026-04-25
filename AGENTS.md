@@ -27,3 +27,73 @@ Content block delta shapes inside `stream_event.event.delta`:
 `content_block_start` carries either `content_block.type:"text"` or `content_block.type:"tool_use"` (with `id`, `name`, `input:{}`). `message_delta.delta.stop_reason` ∈ `end_turn | tool_use | max_tokens | stop_sequence`.
 
 Claude Code runs tools itself during `-p` (agentic). A single run's stream may interleave multiple assistant messages with tool_use/tool_result turns. To preserve fidelity in an OpenAI-compat facade: map `text_delta` → `delta.content`, `tool_use` (+ accumulated `input_json_delta`) → `delta.tool_calls`, and surface `tool_result`-bearing user events (otherwise they are silently dropped and the client loses context of what the agent did).
+
+## Protocol Bridge Architecture (2026-04-25 expansion)
+
+Project transformed from single-protocol OpenAI facade into any-to-any AI protocol bridge.
+
+### Eight Formats (lib/formats/)
+
+- `openai.js`, `anthropic.js`, `gemini.js`, `kilo.js` (legacy)
+- `mistral.js`, `cohere.js`, `ollama.js`, `bedrock.js` (new)
+
+All 8 registered in `translate()` pipeline. Any format can be input, any format can be output.
+
+### Eight Providers (lib/providers/)
+
+- `openai`, `kilo`, `unknown` (legacy)
+- `anthropic` (direct API via ANTHROPIC_API_KEY)
+- `anthropic-via-openai` (facade routing)
+- `ollama` (local instance at OLLAMA_URL, default http://localhost:11434)
+- `bedrock` (AWS via AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, optional AWS_SESSION_TOKEN)
+- `gemini` (via GEMINI_API_KEY)
+
+All 8 registered. Any provider can route requests, format conversion happens transparently.
+
+### Core Pipeline: translate()
+
+```javascript
+translate({ from, to, provider, ...params })
+```
+
+- `from`: input protocol (format name)
+- `to`: output protocol (format name)
+- `provider`: backend to route to (provider name)
+- `...params`: format-specific fields (model, messages, etc.)
+
+Any (from, to, provider) triple works. Transform happens mid-pipeline.
+
+### New Server Endpoints (lib/server.js)
+
+**SDK drop-in compatibility:**
+- POST /v1/messages — Anthropic SDK target
+- POST /v1beta/models/:model:streamGenerateContent — Gemini streaming
+- POST /v1beta/models/:model:generateContent — Gemini non-streaming
+- GET /v1beta/models — Gemini model list
+
+**Observability:**
+- GET /debug/providers — List configured providers
+- GET /debug/config — Runtime config dump
+- POST /debug/translate — Test translate(from, to, provider)
+
+Use /debug/translate to troubleshoot any format/provider combination before integrating.
+
+### Model Enumeration
+
+GET /v1/models returns dynamic list:
+- `kilo`, `opencode`, `claude` (always)
+- `anthropic` (if ANTHROPIC_API_KEY set)
+- `gemini` (if GEMINI_API_KEY set)
+- Ollama models from /api/tags at OLLAMA_URL (e.g., llama2, mistral)
+
+**Important:** Do not hardcode expected models. List is driven by env config.
+
+### Reasoning Content Passthrough
+
+New internal event type: `reasoning-delta` with `{ reasoningDelta: string }` payload.
+
+Maps to:
+- Anthropic thinking blocks (Claude models with extended thinking)
+- OpenAI reasoning_content (o1 models)
+
+When translating between formats, preserve reasoning blocks if both source and target support them. Check format docs for reasoning field names (may vary: `thinking`, `reasoning_content`, `content[type=thinking]`, etc.).
