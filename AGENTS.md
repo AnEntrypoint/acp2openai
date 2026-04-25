@@ -97,3 +97,18 @@ Maps to:
 - OpenAI reasoning_content (o1 models)
 
 When translating between formats, preserve reasoning blocks if both source and target support them. Check format docs for reasoning field names (may vary: `thinking`, `reasoning_content`, `content[type=thinking]`, etc.).
+
+## Brand Routing (HTTP Passthrough Pattern)
+
+OpenAI-compatible brand prefixes (groq, openrouter, together, deepseek, xai, cerebras, perplexity, mistral, fireworks, openai) route via **HTTP passthrough**, not through the `translate()` pipeline.
+
+### Why Passthrough, Not translate()
+
+Mapping raw request bodies through `translate()` requires converting to canonical format via `toParams()`, which expects well-formed OpenAI-compat parameters. Brand requests may send raw/vendor-specific bodies that don't fit. Passthrough is simpler and correct: fetch upstream, stream response bytes unchanged.
+
+### Implementation
+
+- **Dispatch table**: `lib/openai-brands.js` maps prefix → vendor URL + env key
+- **Detection**: `splitBrandModel(model)` regex `/^([a-z0-9-]+)\/(.+)$/` extracts prefix and model name; `isBrand(prefix)` validates
+- **Handling**: `lib/server.js` `handleBrandChat()` fetches upstream, streams body through unchanged
+- **API coverage**: Applies to chat, embeddings (`POST /v1/embeddings`), and token counting (`POST /v1/messages/count_tokens` — heuristic: length / 4)
