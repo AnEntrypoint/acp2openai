@@ -1,0 +1,13 @@
+node_modules
+.probe*.log
+.probe*.mjs
+.test.log
+.test.err
+.test-out.log
+*.tmp
+.thebird-cfg
+
+.server.log
+.server.err
+.gm-stop-verified
+.codeinsight
