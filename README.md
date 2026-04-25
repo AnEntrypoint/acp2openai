@@ -108,6 +108,27 @@ Bare model IDs (no prefix) route to kilo.
 ### Embeddings
 
 - `POST /v1/embeddings` — OpenAI-format embeddings, prefix-routed (`openai/`, `together/`, `mistral/`, `voyage/`, `deepseek/`)
+- `POST /v1beta/models/:model:embedContent` — Gemini-format embeddings (proxies Google)
+- `POST /v1beta/models/:model:countTokens` — Gemini-format token count (heuristic)
+
+### Passthrough endpoints (vendor-prefixed)
+
+- `POST /v1/images/generations` — `openai/`, `together/`
+- `POST /v1/moderations` — `openai/`
+- `POST /v1/rerank` — `cohere/`, `voyage/`, `together/`
+- `POST /v1/audio/speech` — `openai/`, `groq/`
+
+### Operations
+
+- `GET /metrics` — Prometheus exposition (request counters, latency summary, uptime)
+- Optional bearer auth: set `ACPTOAPI_API_KEY=<secret>`; clients must send `Authorization: Bearer <secret>` (or `x-api-key`). `/health`, `/metrics`, `/debug/*`, and demo assets stay public.
+
+### CLI flags
+
+```bash
+npx acptoapi --probe          # show which provider env vars are set
+npx acptoapi --list-brands    # list supported OpenAI-compat brand prefixes
+```
 
 ### Gemini-compatible
 

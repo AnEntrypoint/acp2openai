@@ -185,6 +185,46 @@ async function run() {
   if (saved) process.env.GROQ_API_KEY = saved;
 
   _srv2.server.close();
+  // metrics + Gemini countTokens + passthrough routes
+  const _srv3 = await createServer({ port: 0 });
+  const base3 = 'http://127.0.0.1:' + _srv3.port;
+
+  const metricsRes = await fetch(base3 + '/metrics');
+  assert.strictEqual(metricsRes.status, 200);
+  const metricsBody = await metricsRes.text();
+  assert.ok(metricsBody.includes('acptoapi_uptime_seconds'), '/metrics endpoint exposes uptime');
+
+  const gct = await fetch(base3 + '/v1beta/models/gemini-2.0-flash:countTokens', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: 'hello world' }] }] }),
+  }).then(r => r.json());
+  assert.ok(gct.totalTokens > 0, 'Gemini countTokens returns positive');
+
+  const savedC = process.env.COHERE_API_KEY; delete process.env.COHERE_API_KEY;
+  const rrk = await fetch(base3 + '/v1/rerank', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model: 'cohere/rerank-v3.5', query: 'q', documents: ['a'] }),
+  });
+  assert.strictEqual(rrk.status, 401);
+  if (savedC) process.env.COHERE_API_KEY = savedC;
+
+  _srv3.server.close();
+
+  // Optional bearer auth gate
+  process.env.ACPTOAPI_API_KEY = 'tk-test';
+  const _srv4 = await createServer({ port: 0 });
+  const base4 = 'http://127.0.0.1:' + _srv4.port;
+  const noAuth = await fetch(base4 + '/v1/chat/completions', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model: 'kilo/x', messages: [] }),
+  });
+  assert.strictEqual(noAuth.status, 401, 'auth gate blocks unauthenticated chat');
+  const healthOk = await fetch(base4 + '/health');
+  assert.strictEqual(healthOk.status, 200, '/health stays public under auth gate');
+  delete process.env.ACPTOAPI_API_KEY;
+  _srv4.server.close();
+
+
 
   console.log('ALL TESTS PASS');
 }
