@@ -11,3 +11,8 @@ node_modules
 .server.err
 .gm-stop-verified
 .codeinsight
+.plugkit-browser-profile/
+.plugkit-browser-profile-*/
+.plugkit-agent-worktree/
+.code-search/
+*.stackdump
