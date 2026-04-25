@@ -1,6 +1,14 @@
 const assert = require('assert');
 const api = require('./index.js');
 
+api.PROVIDERS['mock'] = {
+  stream: async function*(params) {
+    yield { type: 'start-step' };
+    yield { type: 'text-delta', textDelta: 'Hello world' };
+    yield { type: 'finish-step', finishReason: 'stop' };
+  }
+};
+
 async function run() {
   // Format registry
   const { getFormat, FORMATS } = api;
@@ -59,10 +67,46 @@ async function run() {
   const osrv = api.createOpenAIServer({ provider:'gemini', apiKey:'test' });
   assert.strictEqual(osrv.constructor.name, 'Server');
 
-  // translate function exists
+  // translate exports
   assert.strictEqual(typeof api.translate, 'function');
   assert.strictEqual(typeof api.translateSync, 'function');
+  assert.strictEqual(typeof api.buffer, 'function');
   assert.strictEqual(typeof api.createStreamActor, 'function');
+
+  // In-buffer: raw passthrough (no from/to)
+  const rawEvs = [];
+  for await (const ev of api.translate({ provider: 'mock', messages: [] })) rawEvs.push(ev);
+  assert.strictEqual(rawEvs[1].type, 'text-delta');
+
+  // In-buffer: api-to-acp SSE events (portless, no server)
+  const acpEvs = [];
+  for await (const ev of api.translate({ to: 'acp', provider: 'mock', messages: [] })) acpEvs.push(ev);
+  assert(acpEvs.some(e => e.type === 'sse' && e.raw.includes('text')), 'acp SSE missing text delta');
+
+  // In-buffer: api-to-openai SSE events
+  const oaiEvs = [];
+  for await (const ev of api.translate({ to: 'openai', provider: 'mock', messages: [] })) oaiEvs.push(ev);
+  assert(oaiEvs.some(e => e.type === 'sse' && e.raw.includes('choices')), 'openai SSE missing choices');
+
+  // In-buffer: buffer() to acp response object
+  const acpRes = await api.buffer({ to: 'acp', provider: 'mock', messages: [] });
+  assert.strictEqual(acpRes.parts[0].text, 'Hello world');
+  assert.strictEqual(acpRes.finish, 'stop');
+
+  // api-to-api: anthropic request → acp response (no HTTP server)
+  const acpFromAnth = await api.buffer({ from: 'anthropic', to: 'acp', provider: 'mock', model: 'claude-3-5-sonnet-20241022', messages: [{ role: 'user', content: 'Hi' }] });
+  assert.strictEqual(acpFromAnth.parts[0].text, 'Hello world');
+
+  // api-to-api: openai request → anthropic response
+  const anthFromOai = await api.buffer({ from: 'openai', to: 'anthropic', provider: 'mock', model: 'gpt-4', messages: [{ role: 'user', content: 'Hi' }] });
+  assert.strictEqual(anthFromOai.type, 'message');
+  assert.strictEqual(anthFromOai.content[0].text, 'Hello world');
+
+  // xstate machine: createStreamActor with to:'acp'
+  const actor = api.createStreamActor({ messages: [] }, 'mock', { to: 'acp' });
+  const machineEvs = [];
+  for await (const ev of actor.stream) machineEvs.push(ev);
+  assert(machineEvs.some(e => e.type === 'sse'), 'xstate machine did not emit SSE events');
 
   console.log('ALL TESTS PASS');
 }

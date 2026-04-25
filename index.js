@@ -100,7 +100,7 @@ const { cloudGenerate, streamCloud, cloudStream } = require('./lib/cloud-generat
 const { ensureAuth, login: oauthLogin } = require('./lib/oauth');
 const { BridgeError, AuthError, RateLimitError, TimeoutError, ContextWindowError, ContentPolicyError, ProviderError, classifyError, redactKeys } = require('./lib/errors');
 const { streamACP, generateACP } = require('./lib/providers/acp');
-const { translate, translateSync, stream } = require('./lib/translate');
+const { translate, translateSync, buffer, stream } = require('./lib/translate');
 const { getFormat, FORMATS } = require('./lib/formats/index');
 const { getProvider, PROVIDERS } = require('./lib/providers/index');
 const { createStreamActor } = require('./lib/machine');
@@ -109,4 +109,4 @@ const { OpenAI } = require('./lib/sdk/openai');
 const { createAnthropicServer } = require('./lib/server/anthropic');
 const { createOpenAIServer } = require('./lib/server/openai');
 
-module.exports = { streamGemini, createFullStream, generateGemini, streamRouter, generateRouter, createRouter, convertMessages, convertTools, cleanSchema, GeminiError, BridgeError, AuthError, RateLimitError, TimeoutError, ContextWindowError, ContentPolicyError, ProviderError, classifyError, redactKeys, cloudGenerate, streamCloud, cloudStream, ensureAuth, oauthLogin, streamACP, generateACP, translate, translateSync, stream, getFormat, FORMATS, getProvider, PROVIDERS, createStreamActor, Anthropic, OpenAI, createAnthropicServer, createOpenAIServer };
+module.exports = { streamGemini, createFullStream, generateGemini, streamRouter, generateRouter, createRouter, convertMessages, convertTools, cleanSchema, GeminiError, BridgeError, AuthError, RateLimitError, TimeoutError, ContextWindowError, ContentPolicyError, ProviderError, classifyError, redactKeys, cloudGenerate, streamCloud, cloudStream, ensureAuth, oauthLogin, streamACP, generateACP, translate, translateSync, buffer, stream, getFormat, FORMATS, getProvider, PROVIDERS, createStreamActor, Anthropic, OpenAI, createAnthropicServer, createOpenAIServer };
