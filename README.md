@@ -67,6 +67,18 @@ const result = await model.generateContentStream('hi');
 | `gemini/` | Google Gemini API | requires `GEMINI_API_KEY` |
 | `ollama/` | Local Ollama | requires Ollama running at `OLLAMA_URL` |
 | `bedrock/` | AWS Bedrock Converse | requires AWS credentials |
+| `openai/` | OpenAI direct | `OPENAI_API_KEY` |
+| `groq/` | Groq | `GROQ_API_KEY` |
+| `openrouter/` | OpenRouter | `OPENROUTER_API_KEY` |
+| `together/` | Together AI | `TOGETHER_API_KEY` |
+| `deepseek/` | DeepSeek | `DEEPSEEK_API_KEY` |
+| `xai/` | xAI (Grok) | `XAI_API_KEY` |
+| `cerebras/` | Cerebras | `CEREBRAS_API_KEY` |
+| `perplexity/` | Perplexity | `PERPLEXITY_API_KEY` |
+| `mistral/` | Mistral La Plateforme | `MISTRAL_API_KEY` |
+| `fireworks/` | Fireworks AI | `FIREWORKS_API_KEY` |
+
+Brand prefixes are pure passthrough to that vendor's OpenAI-compatible endpoint — full streaming, tool-calling, whatever the brand supports flows through unchanged.
 
 Bare model IDs (no prefix) route to kilo.
 
@@ -91,6 +103,11 @@ Bare model IDs (no prefix) route to kilo.
 ### Anthropic-compatible
 
 - `POST /v1/messages` — Anthropic Messages API drop-in, any backend
+- `POST /v1/messages/count_tokens` — token estimator (heuristic, no API call)
+
+### Embeddings
+
+- `POST /v1/embeddings` — OpenAI-format embeddings, prefix-routed (`openai/`, `together/`, `mistral/`, `voyage/`, `deepseek/`)
 
 ### Gemini-compatible
 

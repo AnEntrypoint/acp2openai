@@ -160,6 +160,32 @@ async function run() {
   const bp = bedrock.toParams({ model: 'm', messages: [{ role: 'user', content: 'hi' }] });
   assert(bp, 'bedrock toParams failed');
 
+
+  // brand routing + new endpoints
+  const { isBrand, listBrands } = require('./lib/openai-brands');
+  assert.ok(isBrand('groq') && isBrand('openrouter') && isBrand('xai'));
+  assert.ok(listBrands().length >= 8);
+
+  const { createServer } = require('./lib/server');
+  const _srv2 = await createServer({ port: 0 });
+  const base = 'http://127.0.0.1:' + _srv2.port;
+
+  const ct = await fetch(base + '/v1/messages/count_tokens', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messages: [{ role: 'user', content: 'abcd'.repeat(8) }] }),
+  }).then(r => r.json());
+  assert.ok(ct.input_tokens > 0, 'count_tokens returned positive');
+
+  const saved = process.env.GROQ_API_KEY; delete process.env.GROQ_API_KEY;
+  const br = await fetch(base + '/v1/chat/completions', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model: 'groq/llama-3.3-70b-versatile', messages: [{ role:'user', content:'hi' }] }),
+  });
+  assert.strictEqual(br.status, 401);
+  if (saved) process.env.GROQ_API_KEY = saved;
+
+  _srv2.server.close();
+
   console.log('ALL TESTS PASS');
 }
 
