@@ -12,7 +12,7 @@ api.PROVIDERS['mock'] = {
 async function run() {
   // Format registry
   const { getFormat, FORMATS } = api;
-  assert.deepStrictEqual(Object.keys(FORMATS).sort(), ['acp','anthropic','gemini','openai']);
+  assert.deepStrictEqual(Object.keys(FORMATS).sort(), ['acp','anthropic','cohere','gemini','mistral','ollama','openai']);
 
   // Anthropic toParams
   const anth = getFormat('anthropic');
@@ -66,6 +66,26 @@ async function run() {
   assert.strictEqual(srv.constructor.name, 'Server');
   const osrv = api.createOpenAIServer({ provider:'gemini', apiKey:'test' });
   assert.strictEqual(osrv.constructor.name, 'Server');
+
+  // reasoning-delta SSE handlers
+  const anthRState = { blockIndex: 0 };
+  const anthR1 = anth.toSSE({ type:'reasoning-delta', reasoningDelta:'think' }, anthRState);
+  assert(anthR1.includes('content_block_start'), 'anthropic reasoning-delta missing block_start on first call');
+  assert(anthR1.includes('thinking_delta'), 'anthropic reasoning-delta missing thinking_delta');
+  const anthR2 = anth.toSSE({ type:'reasoning-delta', reasoningDelta:'more' }, anthRState);
+  assert(!anthR2.includes('content_block_start'), 'anthropic reasoning-delta should not repeat block_start');
+
+  const oaiRState = { id:'test', created:0 };
+  const oaiR = oai.toSSE({ type:'reasoning-delta', reasoningDelta:'think' }, oaiRState);
+  assert(oaiR.includes('reasoning_content'), 'openai reasoning-delta missing reasoning_content');
+
+  const gemini = getFormat('gemini');
+  const gemR = gemini.toSSE({ type:'reasoning-delta', reasoningDelta:'think' });
+  assert.strictEqual(gemR, '', 'gemini reasoning-delta should return empty string');
+
+  const acpFmt = getFormat('acp');
+  const acpR = acpFmt.toSSE({ type:'reasoning-delta', reasoningDelta:'think' });
+  assert(acpR.includes('reasoning'), 'acp reasoning-delta missing reasoning type');
 
   // translate exports
   assert.strictEqual(typeof api.translate, 'function');
