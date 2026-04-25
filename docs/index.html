@@ -159,6 +159,20 @@
         <tbody>
           <tr><td>POST</td><td><code>/v1/chat/completions</code></td><td>OpenAI chat (streaming + non-streaming)</td></tr>
           <tr><td>GET</td><td><code>/v1/models</code></td><td>live-probed model list</td></tr>
+          <tr><td>POST</td><td><code>/v1/messages</code></td><td>Anthropic Messages API drop-in</td></tr>
+          <tr><td>POST</td><td><code>/v1/messages/count_tokens</code></td><td>heuristic token estimator</td></tr>
+          <tr><td>POST</td><td><code>/v1/embeddings</code></td><td>prefix-routed embeddings</td></tr>
+          <tr><td>POST</td><td><code>/v1/images/generations</code></td><td>image gen passthrough</td></tr>
+          <tr><td>POST</td><td><code>/v1/moderations</code></td><td>moderation passthrough</td></tr>
+          <tr><td>POST</td><td><code>/v1/rerank</code></td><td>rerank passthrough (cohere/voyage/together)</td></tr>
+          <tr><td>POST</td><td><code>/v1/audio/speech</code></td><td>TTS passthrough (openai/groq)</td></tr>
+          <tr><td>POST</td><td><code>/v1beta/models/:m:streamGenerateContent</code></td><td>Gemini streaming</td></tr>
+          <tr><td>POST</td><td><code>/v1beta/models/:m:embedContent</code></td><td>Gemini embeddings</td></tr>
+          <tr><td>POST</td><td><code>/v1beta/models/:m:countTokens</code></td><td>Gemini token count</td></tr>
+          <tr><td>GET</td><td><code>/metrics</code></td><td>Prometheus exposition</td></tr>
+          <tr><td>GET</td><td><code>/debug/providers</code></td><td>live backend probe</td></tr>
+          <tr><td>GET</td><td><code>/debug/config</code></td><td>active config (redacted)</td></tr>
+          <tr><td>POST</td><td><code>/debug/translate</code></td><td>echo internal event stream</td></tr>
           <tr><td>GET</td><td><code>/health</code></td><td>backend status</td></tr>
         </tbody>
       </table>
